@@ -4,11 +4,14 @@ from rest_framework.decorators import action
 from .models import Task
 from .serializers import TaskSerializer
 from drf_yasg.utils import swagger_auto_schema
-from accounts.permissions import IsAdminOrChef
+from drf_yasg import openapi
+from accounts.permissions import IsAdminOrChef,IsAdminRole
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.exceptions import MethodNotAllowed
 from datetime import datetime
+from .pagination import StandardResultsSetPagination
+from rest_framework.generics import ListAPIView
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
@@ -123,3 +126,26 @@ class TaskViewSet(viewsets.ModelViewSet):
             "task_id": task.id,
             "status": task.status
         }, status=status.HTTP_200_OK)
+    
+
+
+
+
+
+class AdminAllTasksListView(ListAPIView):
+    queryset = Task.objects.all().order_by('-created_at')
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    pagination_class = StandardResultsSetPagination
+
+    @swagger_auto_schema(
+        operation_description="List all tasks (admin only). Supports pagination.",
+        manual_parameters=[
+            openapi.Parameter('page', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('page_size', openapi.IN_QUERY, description="Items per page", type=openapi.TYPE_INTEGER),
+        ],
+        tags=["admin"],
+        responses={200: TaskSerializer(many=True)}
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)

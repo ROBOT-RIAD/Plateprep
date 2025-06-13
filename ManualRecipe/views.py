@@ -1,10 +1,16 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from .models import ManualRecipe
-from .serializers import ManualRecipeSerializer
+from .serializers import ManualRecipeSerializer,UserRecipeSummarySerializer
 from accounts.permissions import IsMemberRole
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from accounts.permissions import IsAdminRole
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from accounts.models import User
+from django.db.models import Count
+from .pagination import StandardResultsSetPagination
 
 # Create your views here.
 
@@ -87,3 +93,90 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
     )
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
+    
+
+
+
+class AdminUserRecipeStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    @swagger_auto_schema(
+        operation_description="Retrieve paginated list of users who have created at least one recipe, including their profile info and recipe count.",
+        manual_parameters=[
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Page number",
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'page_size',
+                openapi.IN_QUERY,
+                description="Number of users per page",
+                type=openapi.TYPE_INTEGER
+            ),
+        ],
+        responses={200: UserRecipeSummarySerializer(many=True)},
+        tags=['admin']
+    )
+    def get(self, request):
+        users_with_recipes = User.objects.annotate(recipe_count=Count('manual_recipes'))\
+            .filter(recipe_count__gt=0)\
+            .select_related('profile')
+
+        # Manual pagination logic
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(users_with_recipes, request)
+        serializer = UserRecipeSummarySerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+    
+
+
+
+
+class AdminUserRecipeListView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    @swagger_auto_schema(
+        operation_description="Retrieve all recipes created by a specific user using their user_id.",
+        manual_parameters=[
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description="ID of the user whose recipes are to be retrieved",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            ),
+            openapi.Parameter(
+                'page',
+                openapi.IN_QUERY,
+                description="Page number",
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'page_size',
+                openapi.IN_QUERY,
+                description="Results per page",
+                type=openapi.TYPE_INTEGER
+            ),
+        ],
+        responses={200: ManualRecipeSerializer(many=True)},
+        tags=["admin"]
+    )
+    def get(self, request):
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response({"error": "user_id query parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        recipes = ManualRecipe.objects.filter(user=user).order_by('-created_at')
+
+        # Manual pagination
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(recipes, request)
+        serializer = ManualRecipeSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)

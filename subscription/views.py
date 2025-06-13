@@ -21,9 +21,8 @@ from drf_yasg import openapi
 from datetime import datetime, timezone as dt_timezone
 
 
-
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 
 

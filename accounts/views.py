@@ -13,6 +13,12 @@ from rest_framework.decorators import action
 from .permissions import IsAdminRole
 from django.db.models.functions import TruncDate
 from django.db.models import Count
+from drf_yasg import openapi
+from datetime import timedelta
+from django.utils.timezone import now
+from ManualRecipe.models import ManualRecipe
+from subscription.models import Subscription
+from django.db.models import Sum, Count
 
 # Create your views here.
 from drf_yasg.utils import swagger_auto_schema
@@ -330,11 +336,32 @@ class ProfileViewSet(viewsets.ViewSet):
 class AdminAllUsersView(APIView):
     permission_classes = [IsAdminRole]
 
+    @swagger_auto_schema(
+        operation_description="Retrieve all users with their profile data (excluding the current admin and superusers).",
+        tags=['admin']
+    )
     def get(self, request):
-        users = User.objects.select_related('profile').all()
+        users = User.objects.select_related('profile')\
+            .exclude(id=request.user.id)\
+            .filter(is_superuser=False)
         serializer = UserWithProfileSerializer(users, many=True)
-        return Response(serializer.data)
+
+        total_users = User.objects.filter(is_superuser=False).count()
+        total_recipes = ManualRecipe.objects.count()
+        total_revenue = Subscription.objects.aggregate(total=Sum('price'))['total'] or 0
+        total_active_subscriptions = Subscription.objects.filter(is_active=True).count()
+        data = {
+            "users": serializer.data,
+            "stats": {
+                "total_users": total_users,
+                "total_recipes": total_recipes,
+                "total_revenue": float(total_revenue),
+                "total_active_subscriptions": total_active_subscriptions
+            }
+        }
+        return Response(data)
     
+
 
 
 
@@ -342,23 +369,42 @@ class AdminAllUsersView(APIView):
 class UserDailyStatsView(APIView):
     permission_classes = [IsAdminRole]
 
+    @swagger_auto_schema(
+        operation_description="Get daily stats: new users joined and cumulative total (including 0-join days).",
+        tags=['admin']
+    )
     def get(self, request):
-        # Group users by creation date
-        daily_data = (
+        # Get actual user join counts
+        raw_data = (
             User.objects
             .annotate(date=TruncDate('date_joined'))
             .values('date')
-            .annotate(count=Count('id'))
+            .annotate(new_users=Count('id'))
             .order_by('date')
         )
 
+        # Convert to dict for fast lookup
+        user_counts = {item['date']: item['new_users'] for item in raw_data}
+
+        # Calculate range
+        if not user_counts:
+            return Response([])
+
+        start_date = min(user_counts.keys())
+        end_date = now().date()
+
         chart_data = []
         cumulative = 0
-        for item in daily_data:
-            cumulative += item['count']
+        current_date = start_date
+
+        while current_date <= end_date:
+            new_users = user_counts.get(current_date, 0)
+            cumulative += new_users
             chart_data.append({
-                'date': item['date'],
+                'date': current_date,
+                'new_users': new_users,
                 'total_users': cumulative
             })
+            current_date += timedelta(days=1)
 
         return Response(chart_data)
