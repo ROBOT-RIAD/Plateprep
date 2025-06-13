@@ -22,7 +22,7 @@ class ManualRecipe(models.Model):
     ingredients = models.TextField(help_text="List of ingredients (comma or line separated)")
     directions = models.TextField(help_text="Step-by-step cooking directions")
 
-    image = models.ImageField(upload_to='recipes/images/', null=True, blank=True)
+    image = models.ImageField(upload_to='media/recipes_images/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
