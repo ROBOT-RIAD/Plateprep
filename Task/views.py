@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Task
-from .serializers import TaskSerializer
+from .serializers import TaskSerializer,AdminTaskListSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from accounts.permissions import IsAdminOrChef,IsAdminRole
@@ -133,8 +133,8 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 class AdminAllTasksListView(ListAPIView):
-    queryset = Task.objects.all().order_by('-created_at')
-    serializer_class = TaskSerializer
+    queryset = Task.objects.select_related('assigned_by', 'assigned_to__profile').order_by('-created_at')
+    serializer_class = AdminTaskListSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
     pagination_class = StandardResultsSetPagination
 
@@ -145,7 +145,7 @@ class AdminAllTasksListView(ListAPIView):
             openapi.Parameter('page_size', openapi.IN_QUERY, description="Items per page", type=openapi.TYPE_INTEGER),
         ],
         tags=["admin"],
-        responses={200: TaskSerializer(many=True)}
+        responses={200: AdminTaskListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
