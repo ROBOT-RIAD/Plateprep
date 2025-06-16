@@ -20,10 +20,7 @@ from pytz import timezone as dt_timezone
 from drf_yasg import openapi
 from datetime import datetime, timezone as dt_timezone
 
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
-
-
 
 
 @method_decorator(name='list', decorator=swagger_auto_schema(tags=['Packages']))
@@ -35,7 +32,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class PackageViewSet(viewsets.ModelViewSet):
     queryset = Package.objects.all()
     serializer_class = PackageSerializer
-    permission_classes=[permissions.IsAuthenticated , IsAdminRole]
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def perform_create(self, serializer):
         data = serializer.validated_data
@@ -44,7 +41,7 @@ class PackageViewSet(viewsets.ModelViewSet):
         stripe_product = stripe.Product.create(
             name=data['name'],
             description=data.get('description', ''),
-            images=[]  # You can upload image URLs to Stripe if needed
+            images=[]
         )
 
         # Create Stripe Price
@@ -55,9 +52,9 @@ class PackageViewSet(viewsets.ModelViewSet):
 
         price = stripe.Price.create(
             product=stripe_product.id,
-            unit_amount=data['amount'],
+            unit_amount=int(data['amount'] * 100),  # Convert dollars to cents
             currency='usd',
-            recurring=recurring_config if recurring_config else None
+            recurring=recurring_config
         )
 
         serializer.save(
@@ -72,7 +69,7 @@ class PackageViewSet(viewsets.ModelViewSet):
         name = data.get('name', instance.name)
         description = data.get('description', instance.description)
 
-        # Update Stripe Product name and description
+        # Update Stripe Product
         if instance.product_id:
             try:
                 stripe.Product.modify(
@@ -81,21 +78,22 @@ class PackageViewSet(viewsets.ModelViewSet):
                     description=description
                 )
             except Exception as e:
-                print(f"Stripe update error: {e}")
+                print(f"Stripe product update error: {e}")
 
-        # If amount, interval, or recurrence changed => create a new price
+        # Recreate price if any key price fields changed
         amount = data.get('amount', instance.amount)
         billing_interval = data.get('billing_interval', instance.billing_interval)
         interval_count = data.get('interval_count', instance.interval_count)
         recurring = data.get('recurring', instance.recurring)
 
-        # If any price-related field changed, create a new Price
-        if (
+        price_needs_update = (
             amount != instance.amount or
             billing_interval != instance.billing_interval or
             interval_count != instance.interval_count or
             recurring != instance.recurring
-        ):
+        )
+
+        if price_needs_update:
             recurring_config = {
                 "interval": billing_interval,
                 "interval_count": interval_count
@@ -104,17 +102,16 @@ class PackageViewSet(viewsets.ModelViewSet):
             try:
                 new_price = stripe.Price.create(
                     product=instance.product_id,
-                    unit_amount=amount,
+                    unit_amount=int(amount * 100),  # Convert dollars to cents
                     currency='usd',
                     recurring=recurring_config
                 )
-                # Save new price_id in DB
                 serializer.save(price_id=new_price.id)
                 return
             except Exception as e:
                 print(f"Stripe price create error: {e}")
 
-        # No price-related changes — just save updated fields
+        # Otherwise just save updated fields
         serializer.save()
 
     def destroy(self, request, *args, **kwargs):
@@ -124,7 +121,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             try:
                 stripe.Product.modify(instance.product_id, active=False)
             except Exception as e:
-                print(f"Stripe delete error: {e}")
+                print(f"Stripe product deactivate error: {e}")
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)

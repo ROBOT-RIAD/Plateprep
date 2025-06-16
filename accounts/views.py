@@ -12,7 +12,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from .permissions import IsAdminRole
 from django.db.models.functions import TruncDate
-from django.db.models import Count
+from django.db.models import Count,Min
 from drf_yasg import openapi
 from datetime import timedelta
 from django.utils.timezone import now
@@ -32,6 +32,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models.functions import TruncMonth
 from django.utils.dateformat import DateFormat
+from dateutil.relativedelta import relativedelta
+from datetime import date
+
+
+
 
 
 
@@ -126,7 +131,6 @@ class GoogleLoginView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-
 
 
 
@@ -366,8 +370,6 @@ class AdminAllUsersView(APIView):
 
 
 
-
-
 class UserMonthlyStatsView(APIView):
     permission_classes = [IsAdminRole]
 
@@ -376,7 +378,20 @@ class UserMonthlyStatsView(APIView):
         tags=['admin']
     )
     def get(self, request):
-        # Group users by month of date_joined
+        today = now().date()
+
+        # Start from January of current year
+        start_month = date(today.year, 1, 1)
+        current_month = today.replace(day=1)
+
+        # Step 1: Build all months from Jan to current month
+        all_months = []
+        month_cursor = start_month
+        while month_cursor <= current_month:
+            all_months.append(month_cursor)
+            month_cursor += relativedelta(months=1)
+
+        # Step 2: Query actual user counts
         raw_data = (
             User.objects
             .annotate(month=TruncMonth('date_joined'))
@@ -384,17 +399,15 @@ class UserMonthlyStatsView(APIView):
             .annotate(new_users=Count('id'))
             .order_by('month')
         )
+        raw_dict = {item['month'].date(): item['new_users'] for item in raw_data}
 
-        # Build chart data with cumulative totals
+        # Step 3: Build chart data
         chart_data = []
         cumulative = 0
-
-        for item in raw_data:
-            month = item['month']
-            new_users = item['new_users']
+        for month in all_months:
+            new_users = raw_dict.get(month, 0)
             cumulative += new_users
-            formatted_month = DateFormat(month).format('M-Y')  # e.g., Jan-2025
-
+            formatted_month = DateFormat(month).format('M-Y')  # Jan-2025
             chart_data.append({
                 'month': formatted_month,
                 'new_users': new_users,
@@ -402,3 +415,7 @@ class UserMonthlyStatsView(APIView):
             })
 
         return Response(chart_data)
+    
+
+
+

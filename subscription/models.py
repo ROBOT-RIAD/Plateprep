@@ -9,7 +9,7 @@ class Package(models.Model):
     description = models.TextField()
     image = models.ImageField(upload_to='media/package_images/', blank=True, null=True)
     recurring = models.BooleanField(default=True)
-    amount = models.IntegerField(help_text="In cents")
+    amount = models.FloatField(help_text="In dollars (e.g., 9.99)")
     billing_interval = models.CharField(max_length=20, help_text="e.g., day, month, year")
     interval_count = models.IntegerField(default=1, help_text="Number of intervals (e.g., every 6 months = 6)")
     price_id = models.CharField(max_length=255, blank=True, null=True)
