@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from accounts.models import User
 from django.db.models import Count
 from .pagination import StandardResultsSetPagination
+from rest_framework.pagination import PageNumberPagination
 
 # Create your views here.
 
@@ -96,9 +97,14 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
     
 
 
+class StandardResultsSetPaginatio(PageNumberPagination):
+    page_size = 6
+    page_size_query_param = 'page_size'
+
 
 class AdminUserRecipeStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+    pagination_class = StandardResultsSetPaginatio
 
     @swagger_auto_schema(
         operation_description="Retrieve paginated list of users who have created at least one recipe, including their profile info and recipe count.",
@@ -125,7 +131,7 @@ class AdminUserRecipeStatsView(APIView):
             .select_related('profile')
 
         # Manual pagination logic
-        paginator = StandardResultsSetPagination()
+        paginator = StandardResultsSetPaginatio()
         page = paginator.paginate_queryset(users_with_recipes, request)
         serializer = UserRecipeSummarySerializer(page, many=True,context={'request': request})
         return paginator.get_paginated_response(serializer.data)
@@ -174,9 +180,5 @@ class AdminUserRecipeListView(APIView):
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
         recipes = ManualRecipe.objects.filter(user=user).order_by('-created_at')
-
-        # Manual pagination
-        paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(recipes, request)
-        serializer = ManualRecipeSerializer(page, many=True,context={'request': request})
-        return paginator.get_paginated_response(serializer.data)
+        serializer = ManualRecipeSerializer(recipes, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
