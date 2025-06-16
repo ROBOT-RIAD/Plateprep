@@ -30,6 +30,8 @@ from drf_yasg import openapi
 from firebase_admin import auth as firebase_auth
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models.functions import TruncMonth
+from django.utils.dateformat import DateFormat
 
 
 
@@ -308,14 +310,14 @@ class ProfileViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def me(self, request):
         profile = self.get_object()
-        serializer = ProfileSerializer(profile)
+        serializer = ProfileSerializer(profile, context={'request': request})
         return Response(serializer.data)
 
     @swagger_auto_schema(request_body=ProfileSerializer, responses={200: ProfileSerializer()})
     @action(detail=False, methods=['patch'])
     def update_me(self, request):
         profile = self.get_object()
-        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -344,7 +346,7 @@ class AdminAllUsersView(APIView):
         users = User.objects.select_related('profile')\
             .exclude(id=request.user.id)\
             .filter(is_superuser=False)
-        serializer = UserWithProfileSerializer(users, many=True)
+        serializer = UserWithProfileSerializer(users, many=True,context={'request': request})
 
         total_users = User.objects.filter(is_superuser=False).count()
         total_recipes = ManualRecipe.objects.count()
@@ -366,45 +368,37 @@ class AdminAllUsersView(APIView):
 
 
 
-class UserDailyStatsView(APIView):
+class UserMonthlyStatsView(APIView):
     permission_classes = [IsAdminRole]
 
     @swagger_auto_schema(
-        operation_description="Get daily stats: new users joined and cumulative total (including 0-join days).",
+        operation_description="Get monthly stats: new users joined and cumulative total per month.",
         tags=['admin']
     )
     def get(self, request):
-        # Get actual user join counts
+        # Group users by month of date_joined
         raw_data = (
             User.objects
-            .annotate(date=TruncDate('date_joined'))
-            .values('date')
+            .annotate(month=TruncMonth('date_joined'))
+            .values('month')
             .annotate(new_users=Count('id'))
-            .order_by('date')
+            .order_by('month')
         )
 
-        # Convert to dict for fast lookup
-        user_counts = {item['date']: item['new_users'] for item in raw_data}
-
-        # Calculate range
-        if not user_counts:
-            return Response([])
-
-        start_date = min(user_counts.keys())
-        end_date = now().date()
-
+        # Build chart data with cumulative totals
         chart_data = []
         cumulative = 0
-        current_date = start_date
 
-        while current_date <= end_date:
-            new_users = user_counts.get(current_date, 0)
+        for item in raw_data:
+            month = item['month']
+            new_users = item['new_users']
             cumulative += new_users
+            formatted_month = DateFormat(month).format('M-Y')  # e.g., Jan-2025
+
             chart_data.append({
-                'date': current_date,
+                'month': formatted_month,
                 'new_users': new_users,
                 'total_users': cumulative
             })
-            current_date += timedelta(days=1)
 
         return Response(chart_data)

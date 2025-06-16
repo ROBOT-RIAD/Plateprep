@@ -110,10 +110,19 @@ class ResetPasswordSerializer(serializers.Serializer):
     
 
 
-
+class ExtendedFileField(serializers.FileField):
+    def to_representation(self, value):
+        if value:
+            request = self.context.get('request')
+            url = getattr(value, 'url', value)
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    image = ExtendedFileField(required=False)
     class Meta:
         model = Profile
         fields = ['id', 'fullname', 'phone_number', 'gender', 'date_of_birth', 'image']

@@ -154,7 +154,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User' 
 
 ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = ['https://*.127.0.0.1']
+# CSRF_TRUSTED_ORIGINS = ['https://*.127.0.0.1','https://sacred-renewing-dove.ngrok-free.app/','http://localhost:5173']
 CORS_ALLOW_ALL_ORIGINS = True
 
 

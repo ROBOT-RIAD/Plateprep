@@ -127,7 +127,7 @@ class AdminUserRecipeStatsView(APIView):
         # Manual pagination logic
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(users_with_recipes, request)
-        serializer = UserRecipeSummarySerializer(page, many=True)
+        serializer = UserRecipeSummarySerializer(page, many=True,context={'request': request})
         return paginator.get_paginated_response(serializer.data)
     
 
@@ -178,5 +178,5 @@ class AdminUserRecipeListView(APIView):
         # Manual pagination
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(recipes, request)
-        serializer = ManualRecipeSerializer(page, many=True)
+        serializer = ManualRecipeSerializer(page, many=True,context={'request': request})
         return paginator.get_paginated_response(serializer.data)

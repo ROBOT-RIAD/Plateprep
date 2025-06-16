@@ -39,7 +39,15 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
         )
         if exclusion:
             prompt += f"Exclude ingredients or items: {exclusion}\n"
-        prompt += "\nPlease provide a recipe name, followed by '#### Ingredients:' and '#### Instructions:'"
+        # prompt += "\nPlease provide a recipe name, followed by '#### Ingredients:' and '#### Instructions:'"
+
+        prompt += (
+                    "\nPlease provide a recipe in the following format:\n"
+                    "### Recipe Name: <Name>\n"
+                    "### Description: <A short paragraph describing the dish>\n"
+                    "#### Ingredients:\n<List of ingredients>\n"
+                    "#### Instructions:\n<Step-by-step instructions>"
+                )
 
         try:
             response = openai.ChatCompletion.create(
