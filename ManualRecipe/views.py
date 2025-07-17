@@ -44,8 +44,7 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
         tags=["Manual Recipes"],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=["dish_name", "menu_type", "tags", "dish_price", "food_cost", "food_percent_markup",
-                      "date_to_serve", "cooking_station", "text_instructions", "dish_description",
+            required=["dish_name", "menu_type", "tags", "dish_description",
                       "ingredients", "directions"],
             properties={
                 'dish_name': openapi.Schema(type=openapi.TYPE_STRING),
@@ -65,6 +64,7 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
         )
     )
     def create(self, request, *args, **kwargs):
+        print("CREATE payload:", request.data)
         return super().create(request, *args, **kwargs)
 
     @swagger_auto_schema(

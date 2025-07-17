@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from .models import User,Profile
-
+from .models import User,Profile,EmailVerificationOTP
+from django.conf import settings
+from django.core.mail import send_mail
 # jwt
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -21,17 +22,54 @@ class RegisterSerializer(serializers.ModelSerializer):
     
 
     def create(self, validated_data):
-        email = validated_data['email']
-        password = validated_data['password']
-        role = validated_data['role']
         user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            role=role
+            username = validated_data['email'],
+            email    = validated_data['email'],
+            password = validated_data['password'],
+            role     = validated_data['role'],
+            is_active=False,                
         )
         Profile.objects.create(user=user)
+
+        # 1️⃣ create OTP object
+        otp_obj = EmailVerificationOTP.objects.create(user=user)
+
+        # 2️⃣ e‑mail it
+        send_mail(
+            subject='Verify your account',
+            message=f'Your verification code is {otp_obj.otp}',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+        )
         return user
+    
+
+
+
+class VerifyEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp   = serializers.CharField(max_length=4)
+
+    def validate(self, attrs):
+        try:
+            user = User.objects.get(email=attrs['email'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Invalid email address.")
+
+        try:
+            otp_rec = EmailVerificationOTP.objects.filter(
+                user=user, otp=attrs['otp'], is_verified=False
+            ).latest('created_at')
+        except EmailVerificationOTP.DoesNotExist:
+            raise serializers.ValidationError("Invalid OTP.")
+
+        # 🔥 Check if OTP is expired here
+        if otp_rec.is_expired():
+            raise serializers.ValidationError("OTP has expired. Please request a new one.")
+
+        attrs['user'] = user
+        attrs['otp_rec'] = otp_rec
+        return attrs
     
 
 
@@ -39,14 +77,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=[('chef', 'Chef'), ('member', 'Member'),('admin','Admin')], required=True)
 
     class Meta:
         model = User
-        fields = ['email', 'password']
+        fields = ['email', 'password','role']
 
     def validate(self, attrs):
         email = attrs.get("email")
         password = attrs.get("password")
+        requested_role = attrs.get("role")
 
         try:
             user = User.objects.get(email=email)
@@ -55,6 +95,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if not user.check_password(password):
             raise serializers.ValidationError("Invalid email or password")
+        
+        if user.role != requested_role:
+            raise serializers.ValidationError("Role does not match the user's assigned role.")
+        
+        if not user.is_email_verified:
+            raise serializers.ValidationError("Please verify your e‑mail before logging in.")
 
         data = super().validate({'email': user.email, 'password': password})
 

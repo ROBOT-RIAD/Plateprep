@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Profile,PasswordResetOTP
+from .models import User, Profile,PasswordResetOTP,EmailVerificationOTP
 
 # Customizing how User appears in admin
 class UserAdmin(BaseUserAdmin):
@@ -34,3 +34,4 @@ class ProfileAdmin(admin.ModelAdmin):
 admin.site.register(User, UserAdmin)
 admin.site.register(Profile, ProfileAdmin)
 admin.site.register(PasswordResetOTP)
+admin.site.register(EmailVerificationOTP)

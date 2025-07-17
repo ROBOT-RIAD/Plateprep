@@ -1,6 +1,6 @@
 from django.urls import path,include
 from rest_framework.routers import DefaultRouter
-from .views import GoogleLoginView,LoginAPIView,RegisterApiView,CustomTokenRefreshView,SendOTPView,VerifyOTPView,ResetPasswordView,ProfileViewSet
+from .views import GoogleLoginView,LoginAPIView,RegisterApiView,CustomTokenRefreshView,SendOTPView,VerifyOTPView,ResetPasswordView,ProfileViewSet,VerifyEmailView,ResendOTPView
 from subscription.views import PublicPackageListView
 
 router = DefaultRouter()
@@ -15,5 +15,7 @@ urlpatterns = [
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('packages/', PublicPackageListView.as_view(), name='public-package-list'),
+    path("register-verify-email/", VerifyEmailView.as_view()),
+    path('register-resend-otp/', ResendOTPView.as_view()),
     path('', include(router.urls)),
 ]

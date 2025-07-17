@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework.generics import CreateAPIView
-from .serializers import RegisterSerializer,CustomTokenObtainPairSerializer,GoogleLoginSerializer,SendOTPSerializer,VerifyOTPSerializer,ResetPasswordSerializer,ProfileSerializer,UserWithProfileSerializer
+from .serializers import RegisterSerializer,CustomTokenObtainPairSerializer,GoogleLoginSerializer,SendOTPSerializer,VerifyOTPSerializer,ResetPasswordSerializer,ProfileSerializer,UserWithProfileSerializer,VerifyEmailSerializer
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from .models import User,Profile,PasswordResetOTP
+from .models import User,Profile,PasswordResetOTP,EmailVerificationOTP
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,7 +13,6 @@ from rest_framework.decorators import action
 from .permissions import IsAdminRole
 from django.db.models.functions import TruncDate
 from django.db.models import Count,Min
-from drf_yasg import openapi
 from datetime import timedelta
 from django.utils.timezone import now
 from ManualRecipe.models import ManualRecipe
@@ -37,10 +36,6 @@ from datetime import date
 from rest_framework.pagination import PageNumberPagination
 
 
-
-
-
-
 class RegisterApiView(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
@@ -48,28 +43,104 @@ class RegisterApiView(CreateAPIView):
     @swagger_auto_schema(tags=["Authentication"])
 
     def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            {
+                "message": "Sign‑up successful."
+                           "Please verify to activate your account."
+            },
+            status=status.HTTP_201_CREATED
+        )
+    
+
+
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(request_body=VerifyEmailSerializer, tags=['Authentication'])
+    def post(self, request):
+        s = VerifyEmailSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        user = s.validated_data['user']
+        otp_rec = s.validated_data['otp_rec']
+
+        if otp_rec.is_expired():
+            return Response({"error": "OTP expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Update user and OTP
+        user.is_active = True
+        user.is_email_verified = True
+        user.save()
+
+        otp_rec.is_verified = True
+        otp_rec.save()
+
+
+        # ✅ Delete all old OTPs for the user (clean up)
+        EmailVerificationOTP.objects.filter(user=user).exclude(pk=otp_rec.pk).delete()
+
+        # ✅ Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        refresh['email'] = user.email
+        refresh['role'] = user.role
+
+        # ✅ Return success response with tokens
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": {
+                "email": user.email,
+                "role": user.role,
+                "name": user.profile.fullname if hasattr(user, 'profile') else None
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
+class ResendOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['email'],
+            properties={'email': openapi.Schema(type=openapi.TYPE_STRING)}
+        ),
+        tags=['Authentication']
+    )
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user = serializer.save()
+            user = User.objects.get(email=email)
+            if user.is_email_verified:
+                return Response({"error": "Email is already verified."}, status=status.HTTP_400_BAD_REQUEST)
 
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'user': {
-                    'email': user.email,
-                    'role': user.role,
-                    'name': user.profile.fullname if hasattr(user, 'profile') else '',
-                }
-            }, status=status.HTTP_201_CREATED)
+            # Invalidate previous unverified OTPs
+            EmailVerificationOTP.objects.filter(user=user, is_verified=False).delete()
 
-        except ValidationError as ve:
-            return Response({"errors": ve.detail}, status=status.HTTP_400_BAD_REQUEST)
+            # Create new OTP
+            otp_rec = EmailVerificationOTP.objects.create(user=user)
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Send e‑mail
+            send_mail(
+                subject='Your new verification code',
+                message=f'Your new OTP is: {otp_rec.otp}',
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+            )
 
+            return Response({"message": "A new OTP has been sent."}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 

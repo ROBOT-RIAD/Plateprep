@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .constants import ROLE_CHOICES,GENDER
+from django.utils import timezone
+from datetime import timedelta
 import random
 # Create your models here.
 
@@ -9,6 +11,7 @@ class User(AbstractUser):
     # extra field add
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10,choices=ROLE_CHOICES)
+    is_email_verified = models.BooleanField(default=False)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
@@ -34,7 +37,27 @@ class Profile(models.Model):
             f"Image: {self.image.url if self.image else 'No image'}"
             f")"
         )
+
+
+
+
+class EmailVerificationOTP(models.Model):                    # 👈 new
+    user        = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp         = models.CharField(max_length=4)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if not self.otp:
+            self.otp = str(random.randint(1000, 9999))
+        super().save(*args, **kwargs)
+
     
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=5)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.otp}"   
 
 
 

@@ -35,8 +35,28 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    # def perform_create(self, serializer):
+    #     serializer.save()
+
     def perform_create(self, serializer):
-        serializer.save()
+        task = serializer.save()
+
+        try:
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{task.assigned_to.id}",
+                {
+                    "type": "new_task_assigned",
+                    "task_id": task.id,
+                    "task_name": task.task_name,
+                    "assigned_by": task.assigned_by.email,
+                    "date": str(task.date),
+                    "duration": str(task.duration),
+                    "status": task.status,
+                }
+            )
+        except Exception as e:
+            print("WebSocket task assignment failed:", str(e))
 
     @swagger_auto_schema(tags=["Tasks"])
     def list(self, request, *args, **kwargs):

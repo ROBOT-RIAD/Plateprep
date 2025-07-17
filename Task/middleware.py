@@ -2,6 +2,7 @@ from channels.middleware import BaseMiddleware
 from accounts.models import User
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
+from urllib.parse import parse_qs
 
 class JWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
@@ -17,6 +18,14 @@ class JWTAuthMiddleware(BaseMiddleware):
                     token = protocol.split("Bearer ")[1]
                     selected_protocol = f"Bearer {token}"
                     break
+
+        
+        if not token:
+            query_string = scope.get("query_string", b"").decode()
+            query_params = parse_qs(query_string)
+            token_list = query_params.get("token")
+            if token_list:
+                token = token_list[0]
 
         if token:
             try:
