@@ -21,10 +21,19 @@ class User(AbstractUser):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     image = models.ImageField(upload_to='media/user_images/', null=True, blank=True)
-    fullname = models.CharField(max_length=200,null=True, blank=True)
-    phone_number = models.CharField(max_length=20,null=True,blank=True)
-    gender = models.CharField(max_length=15,choices=GENDER,null=True,blank=True)
+    fullname = models.CharField(max_length=200, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    gender = models.CharField(max_length=15, choices=GENDER, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
+    
+    # New fields added as TextField
+    bio = models.TextField(null=True, blank=True)  # Bio description
+    instagram = models.TextField(null=True, blank=True)  # Instagram profile description/handle
+    facebook = models.TextField(null=True, blank=True)  # Facebook profile description/handle
+    linkedin = models.TextField(null=True, blank=True)  # LinkedIn profile description/handle
+    twitter = models.TextField(null=True, blank=True)  # Twitter profile description/handle
+    address = models.TextField(null=True, blank=True)  # Address in text form
+    website_link = models.TextField(null=True, blank=True)  # Website link or description
 
     def __str__(self):
         return (
@@ -34,9 +43,17 @@ class Profile(models.Model):
             f"Phone: {self.phone_number}, "
             f"Gender: {self.gender}, "
             f"DOB: {self.date_of_birth}, "
-            f"Image: {self.image.url if self.image else 'No image'}"
+            f"Image: {self.image.url if self.image else 'No image'}, "
+            f"Bio: {self.bio}, "
+            f"Instagram: {self.instagram}, "
+            f"Facebook: {self.facebook}, "
+            f"LinkedIn: {self.linkedin}, "
+            f"Twitter: {self.twitter}, "
+            f"Address: {self.address}, "
+            f"Website: {self.website_link}"
             f")"
         )
+
 
 
 

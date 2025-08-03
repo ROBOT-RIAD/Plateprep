@@ -23,6 +23,7 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
     """
     serializer_class = ManualRecipeSerializer
     permission_classes = [permissions.IsAuthenticated, IsMemberRole]
+    pagination_class=None
 
     def get_queryset(self):
         """Return only recipes that belong to the current user."""
@@ -60,6 +61,7 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
                 'ingredients': openapi.Schema(type=openapi.TYPE_STRING),
                 'directions': openapi.Schema(type=openapi.TYPE_STRING),
                 'image': openapi.Schema(type=openapi.TYPE_FILE),
+                'image_url': openapi.Schema(type=openapi.TYPE_STRING),
             }
         )
     )

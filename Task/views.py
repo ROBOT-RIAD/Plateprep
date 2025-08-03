@@ -21,7 +21,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Task.objects.all() if user.role == 'admin' else (
+        queryset = Task.objects.all(user=self.request.user) if user.role == 'admin' else (
             Task.objects.filter(assigned_by=user) | Task.objects.filter(assigned_to=user)
         )
 
@@ -100,8 +100,20 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='assigned-to-me')
     def assigned_to_me(self, request):
         tasks = Task.objects.filter(assigned_to=request.user)
+        
+        date_str = request.query_params.get('date')
+        print(date_str)
+        if date_str:
+            try:
+                date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                tasks = tasks.filter(date=date)
+                tasks = tasks.filter(date__gte=date)
+            except ValueError:
+                return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(tasks, many=True)
         return Response(serializer.data)
+
     
 
 
@@ -147,8 +159,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             "status": task.status
         }, status=status.HTTP_200_OK)
     
-
-
 
 
 

@@ -196,8 +196,8 @@ class CreateCheckoutSessionView(APIView):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url='http://127.0.0.1:8000/',
-                cancel_url='http://127.0.0.1:8000/',
+                success_url='http://127.0.0.1:8000/?success=success',
+                cancel_url='http://127.0.0.1:8000/?cancel=cancel',
             )
 
             return Response({'url': checkout_session.url})

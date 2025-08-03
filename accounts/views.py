@@ -393,6 +393,7 @@ class ProfileViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['patch'])
     def update_me(self, request):
         profile = self.get_object()
+        print(request.data)
         serializer = ProfileSerializer(profile, data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -404,8 +405,6 @@ class ProfileViewSet(viewsets.ViewSet):
         profile = self.get_object()
         profile.delete()
         return Response({"detail": "Profile deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
-
-
 
 
 

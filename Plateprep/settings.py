@@ -13,12 +13,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
-import environ
+from dotenv import load_dotenv
+load_dotenv()
+# import environ
 
-env = environ.Env(
-    # set casting, default value
-    DEBUG=(bool, False)
-)
+# env = environ.Env(
+#     # set casting, default value
+#     DEBUG=(bool, False)
+# )
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -33,7 +35,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECRET_KEY='django-insecure-r0zcq#hjiig2%c@yxm$d%#oobf43%$dq$8q69vfmb+5-*fu-%t'
 
-SECRET_KEY=env('SECRET_KEY')
+SECRET_KEY=os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -154,7 +156,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'accounts.User' 
 
 ALLOWED_HOSTS = ["*"]
-# CSRF_TRUSTED_ORIGINS = ['https://*.127.0.0.1','https://sacred-renewing-dove.ngrok-free.app/','http://localhost:5173']
+# CSRF_TRUSTED_ORIGINS = ['http://localhost:5174/','https://sacred-renewing-dove.ngrok-free.app/','http://localhost:5173']
 CORS_ALLOW_ALL_ORIGINS = True
 
 
@@ -216,8 +218,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = env("EMAIL")
-EMAIL_HOST_PASSWORD = env("EMAIL_PASSWORD")
+EMAIL_HOST_USER = os.getenv("EMAIL")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -245,22 +247,22 @@ SWAGGER_SETTINGS = {
 }
 
 
-STRIPE_SECRET_KEY=env("STRIPE_SECRET_KEY")
+STRIPE_SECRET_KEY=os.getenv("STRIPE_SECRET_KEY")
 
 
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
 
-STRIPE_WEBHOOK_SECRET=env('STRIPE_WEBHOOK_SECRET')
+STRIPE_WEBHOOK_SECRET=os.getenv('STRIPE_WEBHOOK_SECRET')
 
-OPENAI_API_KEY=env('OPENAI_API_KEY')
+OPENAI_API_KEY=os.getenv('OPENAI_API_KEY')

@@ -169,10 +169,24 @@ class ExtendedFileField(serializers.FileField):
 
 class ProfileSerializer(serializers.ModelSerializer):
     image = ExtendedFileField(required=False)
+    
     class Meta:
         model = Profile
-        fields = ['id', 'fullname', 'phone_number', 'gender', 'date_of_birth', 'image']
-
+        fields = [
+            'id', 
+            'fullname', 
+            'phone_number', 
+            'gender', 
+            'date_of_birth', 
+            'image',
+            'bio',            
+            'instagram',     
+            'facebook',        
+            'linkedin',     
+            'twitter',        
+            'address',        
+            'website_link'
+        ]
 
 
 
