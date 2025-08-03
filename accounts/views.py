@@ -453,36 +453,8 @@ class AdminAllUsersView(APIView):
         return paginator.get_paginated_response(response_data)
 
 
-# class AdminAllUsersView(APIView):
-#     permission_classes = [IsAdminRole]
 
-#     @swagger_auto_schema(
-#         operation_description="Retrieve all users with their profile data (excluding the current admin and superusers).",
-#         tags=['admin']
-#     )
-#     def get(self, request):
-#         users = User.objects.select_related('profile')\
-#             .exclude(id=request.user.id)\
-#             .filter(is_superuser=False)
-#         serializer = UserWithProfileSerializer(users, many=True,context={'request': request})
-
-#         total_users = User.objects.filter(is_superuser=False).count()
-#         total_recipes = ManualRecipe.objects.count()
-#         total_revenue = Subscription.objects.aggregate(total=Sum('price'))['total'] or 0
-#         total_active_subscriptions = Subscription.objects.filter(is_active=True).count()
-#         data = {
-#             "users": serializer.data,
-#             "stats": {
-#                 "total_users": total_users,
-#                 "total_recipes": total_recipes,
-#                 "total_revenue": float(total_revenue),
-#                 "total_active_subscriptions": total_active_subscriptions
-#             }
-#         }
-#         return Response(data)
     
-
-
 
 class UserMonthlyStatsView(APIView):
     permission_classes = [IsAdminRole]

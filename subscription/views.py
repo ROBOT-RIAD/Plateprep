@@ -208,7 +208,6 @@ class CreateCheckoutSessionView(APIView):
 
 
 
-
 @method_decorator(csrf_exempt, name='dispatch')
 class StripeWebhookView(APIView):
     permission_classes = [AllowAny]

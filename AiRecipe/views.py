@@ -95,6 +95,8 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
             return Response({"error": str(e)}, status=500)
 
 
+
+
 class CreateProTipsAPIView(APIView):
     permission_classes = [IsAuthenticated, IsMemberRole]
 
@@ -147,6 +149,8 @@ class CreateProTipsAPIView(APIView):
 
         except Exception as e:
             return Response({'error': f'Error generating pro tips: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 
 class ProTipsListAPIView(APIView):

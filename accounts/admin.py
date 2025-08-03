@@ -24,11 +24,16 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
 
+
+
+
 # Custom ProfileAdmin (optional but useful)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'fullname', 'phone_number', 'gender', 'date_of_birth')
     search_fields = ('user__email', 'fullname', 'phone_number')
     list_filter = ('gender',)
+
+
 
 # Register both
 admin.site.register(User, UserAdmin)

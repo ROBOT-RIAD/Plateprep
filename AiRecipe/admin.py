@@ -10,6 +10,8 @@ class AIGeneratedRecipeAdmin(admin.ModelAdmin):
     list_filter = ('recipe_type', 'cuisine', 'created_at')
    
 
+
+
 @admin.register(ProTips)
 class ProTipsAdmin(admin.ModelAdmin):
     list_display = ('manual_recipe', 'tips', 'created_at', 'updated_at')

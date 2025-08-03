@@ -99,9 +99,12 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
     
 
 
+
 class StandardResultsSetPaginatio(PageNumberPagination):
     page_size = 6
     page_size_query_param = 'page_size'
+
+
 
 
 class AdminUserRecipeStatsView(APIView):
@@ -138,7 +141,6 @@ class AdminUserRecipeStatsView(APIView):
         serializer = UserRecipeSummarySerializer(page, many=True,context={'request': request})
         return paginator.get_paginated_response(serializer.data)
     
-
 
 
 
@@ -184,3 +186,5 @@ class AdminUserRecipeListView(APIView):
         recipes = ManualRecipe.objects.filter(user=user).order_by('-created_at')
         serializer = ManualRecipeSerializer(recipes, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    

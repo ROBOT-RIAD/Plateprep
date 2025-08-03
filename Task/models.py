@@ -3,6 +3,7 @@ from accounts.models import User
 from .constants import STATUS_CHOICES
 # Create your models here.
 
+
 class Task(models.Model):
     task_name = models.CharField(max_length=255)
     date = models.DateField()

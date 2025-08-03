@@ -57,7 +57,6 @@ class Profile(models.Model):
 
 
 
-
 class EmailVerificationOTP(models.Model):                    # 👈 new
     user        = models.ForeignKey(User, on_delete=models.CASCADE)
     otp         = models.CharField(max_length=4)
@@ -75,6 +74,7 @@ class EmailVerificationOTP(models.Model):                    # 👈 new
 
     def __str__(self):
         return f"{self.user.email} - {self.otp}"   
+
 
 
 

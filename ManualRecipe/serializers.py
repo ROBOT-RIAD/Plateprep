@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import ManualRecipe
 from accounts.models import User,Profile
 
+
+
 class ManualRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ManualRecipe

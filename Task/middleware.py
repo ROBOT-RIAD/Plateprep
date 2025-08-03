@@ -40,6 +40,8 @@ class JWTAuthMiddleware(BaseMiddleware):
         scope["subprotocol"] = selected_protocol
         return await super().__call__(scope, receive, send)
 
+
+
 class ProtocolAcceptMiddleware:
     def __init__(self, app):
         self.app = app

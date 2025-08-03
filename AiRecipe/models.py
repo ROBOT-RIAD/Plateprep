@@ -20,6 +20,8 @@ class AIGeneratedRecipe(models.Model):
     
 
 
+
+
 class ProTips(models.Model):
     manual_recipe = models.OneToOneField(ManualRecipe, on_delete=models.CASCADE, related_name='pro_tips')
     tips = models.TextField(help_text="AI-generated pro tips for the recipe")

@@ -123,10 +123,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 
+
 class GoogleLoginSerializer(serializers.Serializer):
     idToken = serializers.CharField()
     role = serializers.ChoiceField(choices=[('chef', 'chef'), ('member', 'member')], required=False)
-
 
 
 
@@ -139,9 +139,13 @@ class SendOTPSerializer(serializers.Serializer):
             raise serializers.ValidationError("User with this email does not exist.")
         return value
 
+
+
+
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField(max_length=4)
+
 
 
 
@@ -165,6 +169,8 @@ class ExtendedFileField(serializers.FileField):
                 return request.build_absolute_uri(url)
             return url
         return None
+
+
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -191,10 +197,11 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 
-
 class UserWithProfileSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
 
     class Meta:
         model = User
         fields = ['email', 'role', 'profile']
+
+        

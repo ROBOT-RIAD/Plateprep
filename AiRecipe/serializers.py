@@ -10,8 +10,10 @@ class AIGeneratedRecipeSerializer(serializers.ModelSerializer):
 
 
 
+
 class ProTipsSerializer(serializers.ModelSerializer):
     manual_recipe = ManualRecipeSerializer()
     class Meta:
         model = ProTips
         fields = ['manual_recipe', 'tips', 'created_at', 'updated_at']
+        

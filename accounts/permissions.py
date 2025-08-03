@@ -9,6 +9,8 @@ class IsAdminRole(BasePermission):
         return request.user.is_authenticated and getattr(request.user, 'role', None) == 'admin'
 
 
+
+
 class IsChefRole(BasePermission):
     """
     Allows access only to users with chef role.
@@ -17,12 +19,16 @@ class IsChefRole(BasePermission):
         return request.user.is_authenticated and getattr(request.user, 'role', None) == 'chef'
 
 
+
+
 class IsMemberRole(BasePermission):
     """
     Allows access only to users with member role.
     """
     def has_permission(self, request, view):
         return request.user.is_authenticated and getattr(request.user, 'role', None) == 'member'
+
+
 
 
 class IsAdminOrChef(BasePermission):
