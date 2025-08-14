@@ -13,15 +13,24 @@ from ManualRecipe.models import ManualRecipe
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 import logging
+import requests
+from io import BytesIO
+from django.core.files.base import ContentFile
+from PIL import Image
+import tempfile
+from django.conf import settings
+from django.core.files.storage import default_storage
+from urllib.parse import quote
+
 
 
 openai.api_key = settings.OPENAI_API_KEY
 logger = logging.getLogger(__name__)
 
 class AIGeneratedRecipeViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated,IsMemberRole]
+    permission_classes = [IsAuthenticated, IsMemberRole]
 
-    @swagger_auto_schema(tags=['Ai'],request_body=AIGeneratedRecipeSerializer)
+    @swagger_auto_schema(tags=['Ai'], request_body=AIGeneratedRecipeSerializer)
     @action(detail=False, methods=['post'], url_path='generate')
     def generate(self, request):
         user = request.user
@@ -39,7 +48,6 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
         prompt = (
             f"Generate a recipe for {recipe_type} with the following details:\n"
             f"Generate a food image for {recipe_type} with the following details:\n...do not provide any kind of text with the image when showing the output..skip the label part..."
-            f"give me light weight image and response of the image needs to be fast and good quality image"
             f"Cuisine: {cuisine}\n"
             f"Main Ingredients: {main_ingredients}\n"
             f"Serving Size: {serving_size}\n"
@@ -49,45 +57,62 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
         prompt += "\nPlease provide a recipe name, followed by '#### Ingredients:' and '#### Instructions:'"
 
         prompt += (
-                    "\nPlease provide a recipe in the following format:\n"
-                    "### Recipe Name: <Name>\n"
-                    "### Description: <A short paragraph describing the dish>\n"
-                    "#### Ingredients:\n<List of ingredients>\n"
-                    "#### Instructions:\n<Step-by-step instructions>"                  
-                )
+            "\nPlease provide a recipe in the following format:\n"
+            "### Recipe Name: <Name>\n"
+            "### Description: <A short paragraph describing the dish>\n"
+            "#### Ingredients:\n<List of ingredients>\n"
+            "#### Instructions:\n<Step-by-step instructions>"                   
+        )
 
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt}
-                ],
+                messages=[{"role": "system", "content": "You are a helpful assistant."},
+                          {"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=700
             )
             ai_text = response['choices'][0]['message']['content']
             parsed = parse_ai_recipe_response(ai_text)
             logger.info(f"Generating image with prompt: {prompt}")
-            response = openai.Image.create(
-                prompt=prompt,
-                n=1,  # Number of images to generate
-                size="512x512"  # Image size
-            )
-            image_url = response['data'][0]['url']
 
-            recipe = AIGeneratedRecipe.objects.create(
-                user=user,
-                recipe_type=recipe_type,
-                main_ingredients=main_ingredients,
-                serving_size=serving_size,
-                exclusion=exclusion,
-                cuisine=cuisine,
-                image_url=image_url
+            # Request image from OpenAI API
+            image_response = openai.Image.create(
+                prompt=prompt,
+                n=1,
+                size="512x512"
             )
+            image_url = image_response['data'][0]['url']  # URL returned by OpenAI
+
+            # Download the image
+            img_data = requests.get(image_url).content
+            image = Image.open(BytesIO(img_data))
+
+            # Save the image to a temporary file
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+                image.save(tmp_file, format='JPEG')
+                tmp_file.seek(0)
+
+                # Create a Django ContentFile from the temporary file and specify a name
+                filename = f"recipes/images/{user.username}_{recipe_type}_{str(serving_size)}.jpg"
+                content_file = ContentFile(tmp_file.read(), name=filename)  # Set the 'name' attribute here
+                # Save the recipe with the image
+                recipe = AIGeneratedRecipe.objects.create(
+                    user=user,
+                    recipe_type=recipe_type,
+                    main_ingredients=main_ingredients,
+                    serving_size=serving_size,
+                    exclusion=exclusion,
+                    cuisine=cuisine,
+                    image=content_file 
+                )
+                recipe.image_url = recipe.image
+                recipe.save()
+
+                resdata = AIGeneratedRecipeSerializer(recipe,context={'request': request}).data
+                resdata['image_url'] = resdata['image']
 
             return Response({
-                "recipe": AIGeneratedRecipeSerializer(recipe).data,
+                "recipe": resdata,
                 "parsed_result": parsed
             }, status=201)
 

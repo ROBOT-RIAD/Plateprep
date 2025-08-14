@@ -131,7 +131,6 @@ class PackageViewSet(viewsets.ModelViewSet):
 
 
 
-
 class PublicPackageListView(generics.ListAPIView):
     queryset = Package.objects.all()
     serializer_class = PackageSerializer
@@ -270,7 +269,7 @@ class StripeWebhookView(APIView):
 
                     interval = item.get('plan', {}).get('interval', 'unknown') if item else 'unknown'
                     interval_count = item.get('plan', {}).get('interval_count', 0) if item else 0
-                    package_name = f"{product_name}_{interval}_{interval_count}"
+                    package_name = f"{interval} {interval_count}"
                     unit_amount = price.get('unit_amount') / 100 if price and price.get('unit_amount') else None
 
                     Subscription.objects.create(
@@ -320,7 +319,6 @@ class StripeWebhookView(APIView):
 
 
 
-
 class CancelSubscriptionView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsMemberRole]
 
@@ -364,7 +362,6 @@ class CancelSubscriptionView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=400)
         
-
 
 
 

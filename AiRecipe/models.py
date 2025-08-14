@@ -11,7 +11,8 @@ class AIGeneratedRecipe(models.Model):
     serving_size = models.PositiveIntegerField()
     exclusion = models.TextField(blank=True)
     cuisine = models.CharField(max_length=300, blank=True)
-    image_url = models.URLField(max_length=1024)
+    image_url = models.URLField(max_length=1024,blank=True, null=True)
+    image = models.ImageField(upload_to='media/ai/recipes/images/', blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
