@@ -82,13 +82,13 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
                 if image and image_count >= 3:
                     return Response(
                         {"error": "You can only create up to 3 recipes with an image without an active subscription."},
-                        status=status.HTTP_400_BAD_REQUEST,
+                        status=status.HTTP_409_CONFLICT,
                     )
 
                 if image_url and image_url_count >= 3:
                     return Response(
                         {"error": "You can only create up to 3 recipes with an image URL without an active subscription."},
-                        status=status.HTTP_400_BAD_REQUEST,
+                        status=status.HTTP_409_CONFLICT,
                     )
 
         # Ensure only one of image / image_url is stored

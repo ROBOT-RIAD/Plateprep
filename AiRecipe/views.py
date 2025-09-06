@@ -43,7 +43,7 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
                 if ai_recipe_count >= 6:
                     return Response(
                         {"error": "You must buy a subscription to create more than 6 AI-generated recipes."},
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_409_CONFLICT,
                     )
 
         recipe_type = data.get('recipe_type')
@@ -162,7 +162,7 @@ class CreateProTipsAPIView(APIView):
                 if pro_tips_count >= 3:
                     return Response(
                         {"error": "You must buy a subscription to create more than 3 pro tips."},
-                        status=status.HTTP_400_BAD_REQUEST
+                        status=status.HTTP_409_CONFLICT,
                     )
 
             # Collect all relevant information from the ManualRecipe object
