@@ -23,9 +23,10 @@ from django.core.files.storage import default_storage
 from urllib.parse import quote
 
 
-
 openai.api_key = settings.OPENAI_API_KEY
 logger = logging.getLogger(__name__)
+
+
 
 class AIGeneratedRecipeViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, IsMemberRole]
@@ -35,6 +36,15 @@ class AIGeneratedRecipeViewSet(viewsets.ViewSet):
     def generate(self, request):
         user = request.user
         data = request.data
+
+        if user.role == 'member':
+            if not user.subscriptions.filter(is_active=True).exists():
+                ai_recipe_count = AIGeneratedRecipe.objects.filter(user=user).count()
+                if ai_recipe_count >= 6:
+                    return Response(
+                        {"error": "You must buy a subscription to create more than 6 AI-generated recipes."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         recipe_type = data.get('recipe_type')
         cuisine = data.get('cuisine')
@@ -142,6 +152,18 @@ class CreateProTipsAPIView(APIView):
             # Check if the manual recipe belongs to the current user
             if manual_recipe.user != request.user:
                 return Response({'error': 'You do not have permission to generate pro tips for this recipe.'}, status=status.HTTP_403_FORBIDDEN)
+            
+
+            user = request.user
+            has_subscription = user.subscriptions.filter(is_active=True).exists()
+
+            if user.role == 'member' and not has_subscription:
+                pro_tips_count = ProTips.objects.filter(manual_recipe=manual_recipe).count()
+                if pro_tips_count >= 3:
+                    return Response(
+                        {"error": "You must buy a subscription to create more than 3 pro tips."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
             # Collect all relevant information from the ManualRecipe object
             prompt = f"Provide pro tips for preparing the dish '{manual_recipe.dish_name}'.\n"

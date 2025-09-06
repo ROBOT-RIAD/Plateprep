@@ -66,8 +66,42 @@ class ManualRecipeViewSet(viewsets.ModelViewSet):
         )
     )
     def create(self, request, *args, **kwargs):
-        print("CREATE payload:", request.data)
-        return super().create(request, *args, **kwargs)
+        user = request.user
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        image = serializer.validated_data.get("image")
+        image_url = serializer.validated_data.get("image_url")
+
+        if user.role == "member":
+            if not user.subscriptions.filter(is_active=True).exists():
+                # Limit for free members
+                image_count = ManualRecipe.objects.filter(user=user, image__isnull=False).count()
+                image_url_count = ManualRecipe.objects.filter(user=user, image_url__isnull=False).count()
+
+                if image and image_count >= 3:
+                    return Response(
+                        {"error": "You can only create up to 3 recipes with an image without an active subscription."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                if image_url and image_url_count >= 3:
+                    return Response(
+                        {"error": "You can only create up to 3 recipes with an image URL without an active subscription."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        # Ensure only one of image / image_url is stored
+        if image:
+            serializer.validated_data["image_url"] = None
+        elif image_url:
+            serializer.validated_data["image"] = None
+
+        # ✅ Fix here — just pass serializer
+        self.perform_create(serializer)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @swagger_auto_schema(
         operation_description="Retrieve a specific manual recipe owned by the logged-in member.",
